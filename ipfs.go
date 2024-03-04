@@ -321,12 +321,12 @@ func (p *Peer) GetFile(ctx context.Context, c cid.Cid) (ufsio.ReadSeekCloser, er
 func (p *Peer) GetFileChunk(ctx context.Context, c cid.Cid, chunk int, chunkSize int) ([]byte, error) {
 	n, err := p.Get(ctx, c)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot get file %w", err)
 	}
 
 	reader, err := ufsio.NewDagReader(ctx, n, p)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot open DAG reader %w", err)
 	}
 	defer reader.Close()
 
@@ -334,12 +334,12 @@ func (p *Peer) GetFileChunk(ctx context.Context, c cid.Cid, chunk int, chunkSize
 
 	_, err = reader.Seek(int64(chunk*chunkSize), 0)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot seek this far %w", err)
 	}
 
 	i, err := reader.Read(b)
-	if err != nil {
-		return nil, err
+	if err != nil && err != io.EOF {
+		return nil, fmt.Errorf("cannot read from reader %w", err)
 	}
 
 	return b[:i], nil

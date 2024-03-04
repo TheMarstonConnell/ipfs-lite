@@ -4,12 +4,14 @@ package main
 // hash from the IPFS network.
 
 import (
+	"bytes"
 	"context"
 	"fmt"
-	"io"
+	"os"
+	"os/signal"
+	"syscall"
 
 	ipfslite "github.com/hsanjuan/ipfs-lite"
-	"github.com/ipfs/go-cid"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/multiformats/go-multiaddr"
 )
@@ -46,16 +48,17 @@ func main() {
 
 	lite.Bootstrap(ipfslite.DefaultBootstrapPeers())
 
-	c, _ := cid.Decode("QmWATWQ7fVPP2EFGu71UkfnqhYXDYH566qy47CnJDgvs8u")
-	rsc, err := lite.GetFile(ctx, c)
-	if err != nil {
-		panic(err)
-	}
-	defer rsc.Close()
-	content, err := io.ReadAll(rsc)
+	f := []byte("this is a chunk test, there are a few chunks here to test out!")
+	buf := bytes.NewReader(f)
+	n, err := lite.AddFile(context.Background(), buf, nil)
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Println(string(content))
+	fmt.Printf("CID: %s\n", n.Cid())
+
+	done := make(chan os.Signal, 1)
+	signal.Notify(done, syscall.SIGINT, syscall.SIGTERM)
+	fmt.Println("Blocking, press ctrl+c to continue...")
+	<-done // Will block here until user hits ctrl+c
 }

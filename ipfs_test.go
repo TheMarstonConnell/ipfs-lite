@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"github.com/stretchr/testify/require"
 	"io"
 	"testing"
 
@@ -196,4 +197,35 @@ func TestFiles(t *testing.T) {
 		t.Error(string(content2))
 		t.Error("different content put and retrieved")
 	}
+}
+
+func TestFileChunk(t *testing.T) {
+	r := require.New(t)
+
+	p1, p2, closer := setupPeers(t)
+	defer closer(t)
+
+	content := []byte("this is a chunk test, there are a few chunks here to test out!")
+	buf := bytes.NewReader(content)
+	n, err := p1.AddFile(context.Background(), buf, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	chunkSize := 10
+	for i := 0; i < 5; i++ {
+
+		e := (i + 1) * chunkSize
+		s := i * chunkSize
+
+		chunk, err := p2.GetFileChunk(context.Background(), n.Cid(), i, chunkSize)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		t.Logf("chunk: %s", string(chunk))
+
+		r.Equal(chunk, content[s:e])
+	}
+
 }

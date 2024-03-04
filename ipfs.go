@@ -317,6 +317,34 @@ func (p *Peer) GetFile(ctx context.Context, c cid.Cid) (ufsio.ReadSeekCloser, er
 	return ufsio.NewDagReader(ctx, n, p)
 }
 
+// GetFileChunk returns a byte array of a chunk with the specified size
+func (p *Peer) GetFileChunk(ctx context.Context, c cid.Cid, chunk int, chunkSize int) ([]byte, error) {
+	n, err := p.Get(ctx, c)
+	if err != nil {
+		return nil, err
+	}
+
+	reader, err := ufsio.NewDagReader(ctx, n, p)
+	if err != nil {
+		return nil, err
+	}
+	defer reader.Close()
+
+	b := make([]byte, chunkSize)
+
+	_, err = reader.Seek(int64(chunk*chunkSize), 0)
+	if err != nil {
+		return nil, err
+	}
+
+	i, err := reader.Read(b)
+	if err != nil {
+		return nil, err
+	}
+
+	return b[:i], nil
+}
+
 // BlockStore offers access to the blockstore underlying the Peer's DAGService.
 func (p *Peer) BlockStore() blockstore.Blockstore {
 	return p.bstore
